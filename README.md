@@ -1,7 +1,6 @@
 # umlS24
 umlS24 devops
 
-this is to see if webhook works
-another check
+ex7 demo
 
 
