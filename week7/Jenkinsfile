@@ -19,7 +19,6 @@ pipeline {
       steps {
         git url: 'https://github.com/bufferbox/Continuous-Delivery-with-Docker-and-Jenkins-Second-Edition.git', branch: 'master'
         sh """
-       
           chmod +x gradlew
         """
       }
@@ -29,13 +28,12 @@ pipeline {
 	   when {
 	       branch "main"
 	   }
-      steps {
-        sh """
-          
-          ./gradlew test
-          ./gradlew jacocoTestCoverageVerification
-        """  
-      }
+	      steps {
+		sh """
+		  ./gradlew test
+		  ./gradlew jacocoTestCoverageVerification
+		"""  
+	      }
     }
 	
 	stage('JaCoCo checkstyle test') {
@@ -43,18 +41,18 @@ pipeline {
 	         not branch "main"
 		   //not { branch 'main' }	
 	   }
-    steps {
-	    sh """
-         
-          ./gradlew jacocoTestReport
-          ./gradlew checkstyleMain
-        """
-        publishHTML (target: [
-          reportDir: 'build/reports/checkstyle',
-          reportFiles: 'main.html',
-          reportName: "JaCoCo Checkstyle"
-        ]) 
-	  }	
+	    steps {
+		    sh """
+	         
+	          ./gradlew jacocoTestReport
+	          ./gradlew checkstyleMain
+	        """
+	        publishHTML (target: [
+	          reportDir: 'build/reports/checkstyle',
+	          reportFiles: 'main.html',
+	          reportName: "JaCoCo Checkstyle"
+	        ]) 
+		  }	
 	}	
   }
    post {
