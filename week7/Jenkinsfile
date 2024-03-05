@@ -48,10 +48,10 @@ pipeline {
           ])
         }
           success{
-            echo 'Tests pass!'
+            echo 'JaCoCo tests pass!'
         }
           failure{
-            echo 'Tests fail!'
+            echo 'JaCoCo tests fail!'
       }
      }
     }
