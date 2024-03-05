@@ -1,6 +1,6 @@
 # umlS24
 umlS24 devops
 
-ex7 demo
+TEST NUMBER 1
 
 
