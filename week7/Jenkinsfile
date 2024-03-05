@@ -40,7 +40,7 @@ pipeline {
 	
 	stage('JaCoCo checkstyle test') {
 	  when {
-	       branch "dev-*"
+	         not branch "main"
 		   //not { branch 'main' }	
 	   }
     steps {
