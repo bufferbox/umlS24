@@ -48,10 +48,10 @@ pipeline {
           ])
         }
           success{
-            echo 'Tests pass!'
+            echo 'JaCoCo tests pass!'
         }
           failure{
-            echo 'Tests fail!'
+            echo 'JaCoCo tests fail!'
       }
      }
     }
@@ -79,9 +79,16 @@ pipeline {
       }
     }
   }
+  
   post {
     always {
       echo 'pipeline completed'
     }
+    success {
+      echo 'pipeline succeeded'
+    }
+    failure {
+      echo 'pipeline failed'
+    }     
   }
 }
