@@ -1,94 +1,71 @@
+// This example uses Jenkin's "declarative" syntax
+//This file points to the other repo that has the code from the textbook using gradle 
+
 pipeline {
   agent {
     kubernetes {
-      // Define the pod template with container template
+      // Define the pod template directly within the kubernetes agent
       containerTemplate {
-            name 'gradle'
-            image 'gradle:latest'
-            command 'sleep'
-            args '30d'
-        }
+        name 'gradle'
+        image 'gradle'
+        command 'sleep'
+        args '30d'
+      }
     }
   }
 
-  //prepare environment 
   stages {
     stage('Checkout code and prepare environment') {
       steps {
         git url: 'https://github.com/bufferbox/Continuous-Delivery-with-Docker-and-Jenkins-Second-Edition.git', branch: 'master'
-        sh '''
+        sh """
+       
           chmod +x gradlew
-        '''
+        """
       }
     }
 
-    //run tests on main branch
-    stage('Code coverage on main branch only') {
-      when {
-        // Run CodeCoverage test only on the main branch
-              branch 'main'
-            }
-      steps{
-        echo 'Code coverage on main branch'
-        sh '''
-          pwd
-          ./gradlew jacocoTestCoverageVerification
-          ./gradlew jacocoTestReport 
-         '''
-      }
-      post{
-        always{
-          echo 'Generating JaCoCo Report'
-      // from the HTML publisher plugin
-      // https://www.jenkins.io/doc/pipeline/steps/htmlpublisher/
-         publishHTML(target: [
-           reportDir: 'build/reports/tests/test',
-           reportFiles: 'index.html',
-           reportName: "JaCoCo Report"
-          ])
-        }
-          success{
-            echo 'JaCoCo tests pass!'
-        }
-          failure{
-            echo 'JaCoCo tests fail!'
-      }
-     }
-    }
-
-    //run tests on all other branches
-    stage('Run Unit test and Checkstyle - all other branches') {
-      when {
-        not { branch 'main' }
-      }
+    stage('jacocoTestCoverageVerification') {
+	   when {
+	       branch "main"
+	   }
       steps {
-         echo 'Unit test and checkstyle done on all other branches'
-         sh '''
-           pwd
-           ./gradlew test
-           ./gradlew checkstyleMain
-         '''
-      
-      // from the HTML publisher plugin
-      // https://www.jenkins.io/doc/pipeline/steps/htmlpublisher/
-        publishHTML(target: [
-            reportDir: 'build/reports/checkstyle',
-            reportFiles: 'main.html',
-            reportName: "Checkstyle Report"
-        ])
+        sh """
+          
+          ./gradlew test
+          ./gradlew jacocoTestCoverageVerification
+        """  
       }
     }
+	
+	stage('JaCoCo checkstyle test') {
+	  when {
+	       branch "dev-*"
+		   //not { branch 'main' }	
+	   }
+    steps {
+	    sh """
+         
+          ./gradlew jacocoTestReport
+          ./gradlew checkstyleMain
+        """
+        publishHTML (target: [
+          reportDir: 'build/reports/checkstyle',
+          reportFiles: 'main.html',
+          reportName: "JaCoCo Checkstyle"
+        ]) 
+	  }	
+	}	
   }
-  
-  post {
+   post {
     always {
-      echo 'pipeline completed'
+      echo 'pipeline complete.'
     }
     success {
-      echo 'pipeline succeeded'
+      echo 'tests pass!'
     }
     failure {
-      echo 'pipeline failed'
-    }     
+      echo 'tests fail!'
+    }
   }
 }
