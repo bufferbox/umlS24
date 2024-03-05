@@ -42,16 +42,16 @@ pipeline {
       // from the HTML publisher plugin
       // https://www.jenkins.io/doc/pipeline/steps/htmlpublisher/
          publishHTML(target: [
-           reportDir: 'build/reports/jacoco/test/html',
+           reportDir: 'build/reports/tests/test',
            reportFiles: 'index.html',
            reportName: "JaCoCo Report"
           ])
         }
           success{
-            echo 'JaCoCo tests pass!'
+            echo 'Tests pass!'
         }
           failure{
-            echo 'JaCoCo tests fail!'
+            echo 'Tests fail!'
       }
      }
     }
@@ -79,16 +79,10 @@ pipeline {
       }
     }
   }
-  
   post {
     always {
       echo 'pipeline completed'
     }
-    success {
-      echo 'pipeline succeeded'
-    }
-    failure {
-      echo 'pipeline failed'
-    }     
   }
 }
+
