@@ -35,7 +35,7 @@ pipeline {
           ./gradlew jacocoTestCoverageVerification
           ./gradlew jacocoTestReport 
          '''
-      }
+      
       post{
         always{
           echo 'Generating JaCoCo Report'
@@ -55,7 +55,7 @@ pipeline {
       }
      }
     }
-
+    }
     //run tests on all other branches
     stage('Run Unit test and Checkstyle - all other branches') {
       when {
