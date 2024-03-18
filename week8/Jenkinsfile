@@ -39,11 +39,10 @@ podTemplate(yaml: '''
 ''') {
   node(POD_LABEL) {
     stage('Build a gradle project') {
-      git 'https://github.com/dlambrig/Continuous-Delivery-with-Docker-and-Jenkins-Second-Edition.git'
+      git 'https://github.com/bufferbox/Continuous-Delivery-with-Docker-and-Jenkins-Second-Edition.git'
       container('gradle') {
         stage('Build a gradle project') {
           sh '''
-          cd Chapter08/sample1
           sed -i 's/minimum = 0.2/minimum = 0.1/' build.gradle
           sed -i '/checkstyle {/,/}/d' build.gradle 
           sed -i '/checkstyle/d' build.gradle 
