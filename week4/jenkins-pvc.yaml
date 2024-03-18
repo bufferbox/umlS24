@@ -3,7 +3,7 @@ kind: PersistentVolumeClaim
 metadata:
   name: jenkins-pv-claim
 spec:
-  storageClassName: hostpath
+  storageClassName: local-path
   accessModes:
     - ReadWriteOnce
   resources:
