@@ -122,8 +122,8 @@ pipeline {
               '''
           }
         } 
-        else if (env.BRANCH_NAME == 'release'){
-          echo 'Creating container bufferdock/calculator-release:0.1'
+        else if (env.BRANCH_NAME == 'feature'){
+          echo 'Creating container bufferdock/calculator-feature:0.1'
           container('gradle') {
               sh '''
               sed -i 's/minimum = 0.2/minimum = 0.1/' build.gradle
@@ -141,7 +141,7 @@ pipeline {
               echo 'COPY ./calculator-0.0.1-SNAPSHOT.jar app.jar' >> Dockerfile
               echo 'ENTRYPOINT ["java", "-jar", "app.jar"]' >> Dockerfile
               mv /mnt/calculator-0.0.1-SNAPSHOT.jar .
-              /kaniko/executor --context `pwd` --destination bufferdock/calculator-release:0.1
+              /kaniko/executor --context `pwd` --destination bufferdock/calculator-feature:0.1
               '''
           }
         }
