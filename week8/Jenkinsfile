@@ -1,73 +1,151 @@
+pipeline {
+  agent {
+    kubernetes {
+        yaml '''
+            apiVersion: v1
+            kind: Pod
+            spec:
+              containers:
+              - name: gradle
+                image: gradle
+                command:
+                - sleep
+                args:
+                - 99d
+                volumeMounts:
+                - name: shared-storage
+                  mountPath: /mnt        
+              - name: kaniko
+                image: gcr.io/kaniko-project/executor:debug
+                command:
+                - sleep
+                args:
+                - 9999999
+                volumeMounts:
+                - name: shared-storage
+                  mountPath: /mnt
+                - name: kaniko-secret
+                  mountPath: /kaniko/.docker
+              restartPolicy: Never
+              volumes:
+              - name: shared-storage
+                persistentVolumeClaim:
+                  claimName: jenkins-pv-claim
+              - name: kaniko-secret
+                secret:
+                    secretName: dockercred
+                    items:
+                    - key: .dockerconfigjson
+                      path: config.json
+        '''
+    }
+    }
+  stages {
+      stage('Checkout code and prepare environment') {
+          steps {
+              git url: 'https://github.com/bufferbox/Continuous-Delivery-with-Docker-and-Jenkins-Second-Edition.git', branch: 'master'
+              sh '''
+              chmod +x gradlew
+              '''
+          }
+      }
 
+      stage('Check what branch'){
+          steps{
+              sh '''
+                 echo 'Working on branch: ' + env.BRANCH_NAME
+              '''
+          }
+      }
+      
+      stage('Code coverage on main branch only') {
+          when {
+        // Run CodeCoverage test only on the main branch
+              branch 'main'
+            }
+          steps{
+              echo 'Code coverage on main branch'
+              sh '''
+              pwd
+              ./gradlew jacocoTestCoverageVerification
+              ./gradlew jacocoTestReport 
+              '''
+          }
+      }
 
-podTemplate(yaml: '''
-    apiVersion: v1
-    kind: Pod
-    spec:
-      containers:
-      - name: gradle
-        image: gradle
-        command:
-        - sleep
-        args:
-        - 99d
-        volumeMounts:
-        - name: shared-storage
-          mountPath: /mnt        
-      - name: kaniko
-        image: gcr.io/kaniko-project/executor:debug
-        command:
-        - sleep
-        args:
-        - 9999999
-        volumeMounts:
-        - name: shared-storage
-          mountPath: /mnt
-        - name: kaniko-secret
-          mountPath: /kaniko/.docker
-      restartPolicy: Never
-      volumes:
-      - name: shared-storage
-        persistentVolumeClaim:
-          claimName: jenkins-pv-claim
-      - name: kaniko-secret
-        secret:
-            secretName: dockercred
-            items:
-            - key: .dockerconfigjson
-              path: config.json
-''') {
-  node(POD_LABEL) {
-    stage('Build a gradle project') {
-      git 'https://github.com/bufferbox/Continuous-Delivery-with-Docker-and-Jenkins-Second-Edition.git'
-      container('gradle') {
-        stage('Build a gradle project') {
-          sh '''
-          sed -i 's/minimum = 0.2/minimum = 0.1/' build.gradle
-          sed -i '/checkstyle {/,/}/d' build.gradle 
-          sed -i '/checkstyle/d' build.gradle 
-          cat build.gradle
-          chmod +x gradlew
-          ./gradlew build
-          mv ./build/libs/calculator-0.0.1-SNAPSHOT.jar /mnt
-          '''
+       //run tests on all other branches
+      stage('Run Unit test and Checkstyle - all other branches') {
+          when {
+              not { branch 'main' }
+          }
+          steps {
+              echo 'Unit test and checkstyle done on all other branches'
+              sh '''
+               pwd
+               ./gradlew test
+               ./gradlew checkstyleMain
+              '''
+      
+      // from the HTML publisher plugin
+      // https://www.jenkins.io/doc/pipeline/steps/htmlpublisher/
+              publishHTML(target: [
+                reportDir: 'build/reports/checkstyle',
+                reportFiles: 'main.html',
+                reportName: "Checkstyle Report"
+              ])
+          }
+      }        
+}
+  post {
+    success {
+      script {
+        if (env.BRANCH_NAME == 'main'){
+          echo 'Creating container bufferdock/calculator:1.0'
+          container('gradle') {
+              sh '''
+              sed -i 's/minimum = 0.2/minimum = 0.1/' build.gradle
+              sed -i '/checkstyle {/,/}/d' build.gradle 
+              sed -i '/checkstyle/d' build.gradle 
+              cat build.gradle
+              chmod +x gradlew
+              ./gradlew build
+              mv ./build/libs/calculator-0.0.1-SNAPSHOT.jar /mnt
+              '''
+          }
+          container('kaniko') {
+              sh '''
+              echo 'FROM openjdk:8-jre' > Dockerfile
+              echo 'COPY ./calculator-0.0.1-SNAPSHOT.jar app.jar' >> Dockerfile
+              echo 'ENTRYPOINT ["java", "-jar", "app.jar"]' >> Dockerfile
+              mv /mnt/calculator-0.0.1-SNAPSHOT.jar .
+              /kaniko/executor --context `pwd` --destination bufferdock/calculator:1.0
+              '''
+          }
+        } 
+        else if (env.BRANCH_NAME == 'feature'){
+          echo 'Creating container bufferdock/calculator-feature:0.1'
+          container('gradle') {
+              sh '''
+              sed -i 's/minimum = 0.2/minimum = 0.1/' build.gradle
+              sed -i '/checkstyle {/,/}/d' build.gradle 
+              sed -i '/checkstyle/d' build.gradle 
+              cat build.gradle
+              chmod +x gradlew
+              ./gradlew build
+              mv ./build/libs/calculator-0.0.1-SNAPSHOT.jar /mnt
+              '''
+          }
+          container('kaniko') {
+              sh '''
+              echo 'FROM openjdk:8-jre' > Dockerfile
+              echo 'COPY ./calculator-0.0.1-SNAPSHOT.jar app.jar' >> Dockerfile
+              echo 'ENTRYPOINT ["java", "-jar", "app.jar"]' >> Dockerfile
+              mv /mnt/calculator-0.0.1-SNAPSHOT.jar .
+              /kaniko/executor --context `pwd` --destination bufferdock/calculator-feature:0.1
+              '''
+          }
         }
       }
     }
-
-    stage('Build Java Image') {
-      container('kaniko') {
-        stage('Build a gradle project') {
-          sh '''
-          echo 'FROM openjdk:8-jre' > Dockerfile
-          echo 'COPY ./calculator-0.0.1-SNAPSHOT.jar app.jar' >> Dockerfile
-          echo 'ENTRYPOINT ["java", "-jar", "app.jar"]' >> Dockerfile
-          mv /mnt/calculator-0.0.1-SNAPSHOT.jar .
-          /kaniko/executor --context `pwd` --destination bufferdock/hello-kaniko:1.0
-          '''
-        }
-      }
-    }
-
   }
 }
