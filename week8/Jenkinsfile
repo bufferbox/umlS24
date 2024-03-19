@@ -96,4 +96,56 @@ pipeline {
           }
       }        
 }
+  post {
+    success {
+      script {
+        if (env.BRANCH_NAME == 'main'){
+          echo 'Creating container bufferdock/calculator:1.0'
+          container('gradle') {
+              sh '''
+              sed -i 's/minimum = 0.2/minimum = 0.1/' build.gradle
+              sed -i '/checkstyle {/,/}/d' build.gradle 
+              sed -i '/checkstyle/d' build.gradle 
+              cat build.gradle
+              chmod +x gradlew
+              ./gradlew build
+              mv ./build/libs/calculator-0.0.1-SNAPSHOT.jar /mnt
+              '''
+          }
+          container('kaniko') {
+              sh '''
+              echo 'FROM openjdk:8-jre' > Dockerfile
+              echo 'COPY ./calculator-0.0.1-SNAPSHOT.jar app.jar' >> Dockerfile
+              echo 'ENTRYPOINT ["java", "-jar", "app.jar"]' >> Dockerfile
+              mv /mnt/calculator-0.0.1-SNAPSHOT.jar .
+              /kaniko/executor --context `pwd` --destination bufferdock/calculator:1.0
+              '''
+          }
+        } 
+        else if (env.BRANCH_NAME == 'release'){
+          echo 'Creating container bufferdock/calculator-release:0.1'
+          container('gradle') {
+              sh '''
+              sed -i 's/minimum = 0.2/minimum = 0.1/' build.gradle
+              sed -i '/checkstyle {/,/}/d' build.gradle 
+              sed -i '/checkstyle/d' build.gradle 
+              cat build.gradle
+              chmod +x gradlew
+              ./gradlew build
+              mv ./build/libs/calculator-0.0.1-SNAPSHOT.jar /mnt
+              '''
+          }
+          container('kaniko') {
+              sh '''
+              echo 'FROM openjdk:8-jre' > Dockerfile
+              echo 'COPY ./calculator-0.0.1-SNAPSHOT.jar app.jar' >> Dockerfile
+              echo 'ENTRYPOINT ["java", "-jar", "app.jar"]' >> Dockerfile
+              mv /mnt/calculator-0.0.1-SNAPSHOT.jar .
+              /kaniko/executor --context `pwd` --destination bufferdock/calculator-release:0.1
+              '''
+          }
+        }
+      }
+    }
+  }
 }
